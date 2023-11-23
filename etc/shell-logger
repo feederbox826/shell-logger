@@ -7,7 +7,7 @@
 # Homepage: https://github.com/rcmdnk/shell-logger
 #
 _LOGGER_NAME="shell-logger"
-_LOGGER_VERSION="v0.2.0"
+_LOGGER_VERSION="v0.2.1"
 _LOGGER_DATE="04/Feb/2019"
 # }}}
 
@@ -37,18 +37,17 @@ _LOGGER_DATE="04/Feb/2019"
 # }}}
 
 # Default variables {{{
-LOGGER_DATE_FORMAT=${LOGGER_DATE_FORMAT:-'%Y/%m/%d %H:%M:%S'}
-LOGGER_LEVEL=${LOGGER_LEVEL:-1} # 0: debug, 1: info, 2: notice, 3: warning, 4: error
+LOGGER_DATE_FORMAT=${LOGGER_DATE_FORMAT:-'%Y-%m-%d %H:%M:%S'}
+LOGGER_LEVEL=${LOGGER_LEVEL:-1} # 0: debug, 1: info, 2: warning, 3: error
 LOGGER_STDERR_LEVEL=${LOGGER_STDERR_LEVEL:-4}
-LOGGER_DEBUG_COLOR=${LOGGER_DEBUG_COLOR:-"3"}
-LOGGER_INFO_COLOR=${LOGGER_INFO_COLOR:-""}
-LOGGER_NOTICE_COLOR=${LOGGER_NOTICE_COLOR:-"36"}
+LOGGER_DEBUG_COLOR=${LOGGER_DEBUG_COLOR:-"37"}
+LOGGER_INFO_COLOR=${LOGGER_INFO_COLOR:-"36"}
 LOGGER_WARNING_COLOR=${LOGGER_WARNING_COLOR:-"33"}
 LOGGER_ERROR_COLOR=${LOGGER_ERROR_COLOR:-"31"}
 LOGGER_COLOR=${LOGGER_COLOR:-auto}
-LOGGER_COLORS=("$LOGGER_DEBUG_COLOR" "$LOGGER_INFO_COLOR" "$LOGGER_NOTICE_COLOR" "$LOGGER_WARNING_COLOR" "$LOGGER_ERROR_COLOR")
+LOGGER_COLORS=("$LOGGER_DEBUG_COLOR" "$LOGGER_INFO_COLOR" "$LOGGER_WARNING_COLOR" "$LOGGER_ERROR_COLOR")
 if [ "${LOGGER_LEVELS:-}" = "" ];then
-  LOGGER_LEVELS=("DEBUG" "INFO" "NOTICE" "WARNING" "ERROR")
+  LOGGER_LEVELS=("DEBUG" "INFO" "WARN" "ERR")
 fi
 LOGGER_SHOW_TIME=${LOGGER_SHOW_TIME:-1}
 LOGGER_SHOW_FILE=${LOGGER_SHOW_FILE:-1}
@@ -94,7 +93,7 @@ _logger_level () {
     local level=1
   fi
   [ -z "${ZSH_VERSION:-}" ] || emulate -L ksh
-  printf "[${LOGGER_LEVELS[$level]}]"
+  printf "${LOGGER_LEVELS[$level]}"
 }
 
 _logger_time () {
@@ -128,7 +127,7 @@ _logger () {
   if [ "$level" -lt "$(_get_level "$LOGGER_LEVEL")" ];then
     return
   fi
-  local msg_prefix="$(_logger_time)$(_logger_file "$wrap")$(_logger_level "$level")"
+  local msg_prefix="$(_logger_time)$(_logger_file "$wrap")"
   local msg="${msg_prefix:+$msg_prefix }$*" # add prefix with a space only if prefix not is empty
   msg="${msg/\$/\\\$}" # escape $ is msg to be able to use eval below without trying to resolve a variable
   local _logger_printf=printf
@@ -139,7 +138,7 @@ _logger () {
   fi
   if [ "$LOGGER_COLOR" = "always" ] || { test "$LOGGER_COLOR" = "auto"  && test  -t $out ; };then
     [ -z "${ZSH_VERSION:-}" ] || emulate -L ksh
-    eval "$_logger_printf \"\\e[${LOGGER_COLORS[$level]}m%s\\e[m\\n\"  \"$msg\""
+    eval "$_logger_printf \"\\e[${LOGGER_COLORS[$level]}m$(_logger_level "$level")\\e[m%s\\n\"  \"$msg\""
   else
     eval "$_logger_printf \"%s\\n\" \"$msg\""
   fi
@@ -159,18 +158,9 @@ info () {
   information "$*"
 }
 
-notification () {
-  ((_LOGGER_WRAP++)) || true
-  _logger 2 "$*"
-}
-notice () {
-  ((_LOGGER_WRAP++)) || true
-  notification "$*"
-}
-
 warning () {
   ((_LOGGER_WRAP++)) || true
-  _logger 3 "$*"
+  _logger 2 "$*"
 }
 warn () {
   ((_LOGGER_WRAP++)) || true
@@ -248,7 +238,7 @@ error () {
       done
     } 1>&2
   fi
-  _logger 4 "$*"
+  _logger 3 "$*"
   return "$LOGGER_ERROR_RETURN_CODE"
 }
 err () {
